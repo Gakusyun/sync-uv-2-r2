@@ -80,19 +80,28 @@ jobs:
         if: steps.check.outputs.skip == 'false'
         run: |
           mkdir -p ./output/astral-sh/uv/releases/download
-          # Move version directories to releases/download
-          for dir in ./output/astral-sh/uv/[0-9.]*; do
-            if [ -d "$dir" ]; then
-              version=$(basename "$dir")
-              mkdir -p ./output/astral-sh/uv/releases/download/$version
-              cp -r "$dir"/* ./output/astral-sh/uv/releases/download/$version/
-              # Remove original version directory
-              rm -rf "$dir"
+          # Get the latest version number from directory
+          LATEST_VERSION=$(ls -d ./output/astral-sh/uv/[0-9.]* | sort -V | tail -1 | basename)
+          if [ -n "$LATEST_VERSION" ]; then
+            # Create releases/download directory for the latest version
+            mkdir -p ./output/astral-sh/uv/releases/download/$LATEST_VERSION
+            # Copy files from LatestRelease (symbolic link to latest version)
+            if [ -d "./output/astral-sh/uv/LatestRelease" ]; then
+              cp -r ./output/astral-sh/uv/LatestRelease/* ./output/astral-sh/uv/releases/download/$LATEST_VERSION/
+              # Only copy uv-installer files to output/uv/ for easy access
+              mkdir -p ./output/uv
+              cp -r ./output/astral-sh/uv/LatestRelease/uv-installer* ./output/uv/
+            else
+              # Fallback: copy from the version directory if LatestRelease doesn't exist
+              cp -r ./output/astral-sh/uv/$LATEST_VERSION/* ./output/astral-sh/uv/releases/download/$LATEST_VERSION/
+              # Only copy uv-installer files to output/uv/ for easy access
+              mkdir -p ./output/uv
+              cp -r ./output/astral-sh/uv/$LATEST_VERSION/uv-installer* ./output/uv/
             fi
-          done
-          cp -r ./output/astral-sh/uv/LatestRelease/uv-installer* ./output/uv/
-          # Remove LatestRelease directory
-          rm -rf ./output/astral-sh/uv/LatestRelease
+            # Remove original version directories and LatestRelease
+            rm -rf ./output/astral-sh/uv/[0-9.]*
+            rm -rf ./output/astral-sh/uv/LatestRelease
+          fi
 
       - name: Sync to R2
         if: steps.check.outputs.skip == 'false'
