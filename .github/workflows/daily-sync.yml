@@ -90,6 +90,7 @@ jobs:
               rm -rf "$dir"
             fi
           done
+          cp -r ./output/astral-sh/uv/LatestRelease/uv-installer* ./output/uv/
           # Remove LatestRelease directory
           rm -rf ./output/astral-sh/uv/LatestRelease
 
