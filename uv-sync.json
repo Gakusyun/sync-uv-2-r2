@@ -1,0 +1,9 @@
+[
+    {
+        "repo": "astral-sh/uv",
+        "versions": 1,
+        "flat": false,
+        "tarball": false,
+        "pre_release": false
+    }
+]
