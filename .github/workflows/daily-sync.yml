@@ -36,7 +36,7 @@ jobs:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
         run: |
-          CURRENT=$(aws s3 ls s3://${R2_BUCKET_NAME}/sync2r2/astral-sh/uv/ \
+          CURRENT=$(aws s3 ls s3://${R2_BUCKET_NAME}/sync2r2/astral-sh/uv/releases/download/ \
             --endpoint-url https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com 2>/dev/null \
             | grep -oP '(?<=PRE )[0-9.]+(?=/)' | sort -V | tail -1 || echo "")
           echo "version=$CURRENT" >> $GITHUB_OUTPUT
@@ -75,6 +75,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TUNASYNC_WORKING_DIR: ./output
         run: uv run main.py --config uv-sync.json --workers 8
+
+      - name: Create releases/download directory structure
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          mkdir -p ./output/astral-sh/uv/releases/download
+          # Move version directories to releases/download
+          for dir in ./output/astral-sh/uv/[0-9.]*; do
+            if [ -d "$dir" ]; then
+              version=$(basename "$dir")
+              mkdir -p ./output/astral-sh/uv/releases/download/$version
+              cp -r "$dir"/* ./output/astral-sh/uv/releases/download/$version/
+            fi
+          done
 
       - name: Sync to R2
         if: steps.check.outputs.skip == 'false'
