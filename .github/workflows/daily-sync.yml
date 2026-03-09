@@ -15,11 +15,14 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version-file: .python-version
+          cache: "pip"
 
       - name: Install dependencies
         run: uv sync
@@ -30,31 +33,26 @@ jobs:
           TUNASYNC_WORKING_DIR: ./output
         run: uv run main.py --config uv-sync.json
 
-      - name: Install rclone
+      - name: Configure AWS CLI for R2
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
         run: |
-          curl https://rclone.org/install.sh | sudo bash
-
-      - name: Configure rclone for R2
-        run: |
-          mkdir -p ~/.config/rclone
-          cat > ~/.config/rclone/rclone.conf << EOF
-          [r2]
-          type = s3
-          provider = Cloudflare
-          access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
-          secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          endpoint = https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
-          acl = private
-          EOF
+          aws configure set aws_access_key_id $R2_ACCESS_KEY_ID
+          aws configure set aws_secret_access_key $R2_SECRET_ACCESS_KEY
+          aws configure set region auto
 
       - name: Clean R2 bucket
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
         run: |
-          rclone delete r2:${{ secrets.R2_BUCKET_NAME }}/sync2r2 --rmdirs
+          aws s3 rm s3://${R2_BUCKET_NAME}/sync2r2 --recursive --endpoint-url https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
 
       - name: Upload to R2
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
         run: |
-          rclone sync ./output r2:${{ secrets.R2_BUCKET_NAME }}/sync2r2 \
-            --progress \
-            --transfers 4 \
-            --checkers 8 \
-            --fast-list
+          aws s3 sync ./output s3://${R2_BUCKET_NAME}/sync2r2 --endpoint-url https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
