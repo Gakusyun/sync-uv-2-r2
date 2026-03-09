@@ -22,7 +22,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version-file: .python-version
-          cache: "pip"
 
       - name: Install dependencies
         run: uv sync
@@ -43,16 +42,12 @@ jobs:
           aws configure set aws_secret_access_key $R2_SECRET_ACCESS_KEY
           aws configure set region auto
 
-      - name: Clean R2 bucket
+      - name: Sync to R2 (incremental)
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
         run: |
-          aws s3 rm s3://${R2_BUCKET_NAME}/sync2r2 --recursive --endpoint-url https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
-
-      - name: Upload to R2
-        env:
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
-        run: |
-          aws s3 sync ./output s3://${R2_BUCKET_NAME}/sync2r2 --endpoint-url https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
+          aws s3 sync ./output s3://${R2_BUCKET_NAME}/sync2r2 \
+            --endpoint-url https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com \
+            --delete \
+            --exclude "**/LatestRelease/*"
