@@ -8,6 +8,7 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    environment: sync
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -46,9 +47,13 @@ jobs:
           acl = private
           EOF
 
+      - name: Clean R2 bucket
+        run: |
+          rclone delete r2:${{ secrets.R2_BUCKET_NAME }}/sync2r2 --rmdirs
+
       - name: Upload to R2
         run: |
-          rclone sync ./output r2:${{ secrets.R2_BUCKET }} \
+          rclone sync ./output r2:${{ secrets.R2_BUCKET_NAME }}/sync2r2 \
             --progress \
             --transfers 4 \
             --checkers 8 \
